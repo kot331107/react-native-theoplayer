@@ -20,8 +20,8 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.theoplayer.android.api.THEOplayerConfig;
 import com.theoplayer.android.api.THEOplayerView;
-import com.theoplayer.android.api.ads.ima.GoogleImaIntegration;
-import com.theoplayer.android.api.ads.ima.GoogleImaIntegrationFactory;
+//import com.theoplayer.android.api.ads.ima.GoogleImaIntegration;
+//import com.theoplayer.android.api.ads.ima.GoogleImaIntegrationFactory;
 import com.theoplayer.android.api.player.Player;
 import com.theoplayer.android.api.player.RequestCallback;
 import com.theoplayer.android.api.player.track.mediatrack.MediaTrack;
@@ -165,14 +165,14 @@ public class ReactTHEOplayerView extends FrameLayout implements LifecycleEventLi
     playerView.setLayoutParams(layoutParams);
 
     addView(playerView, 0, layoutParams);
-    addIntegrations(playerView);
+//    addIntegrations(playerView);
   }
 
-  private void addIntegrations(@NonNull final THEOplayerView playerView) {
-    GoogleImaIntegration googleImaIntegration = GoogleImaIntegrationFactory.createGoogleImaIntegration(playerView);
-    playerView.getPlayer().addIntegration(googleImaIntegration);
-    // Add other future integrations here.
-  }
+//  private void addIntegrations(@NonNull final THEOplayerView playerView) {
+//    GoogleImaIntegration googleImaIntegration = GoogleImaIntegrationFactory.createGoogleImaIntegration(playerView);
+//    playerView.getPlayer().addIntegration(googleImaIntegration);
+//    // Add other future integrations here.
+//  }
 
   @Override
   protected void onAttachedToWindow() {

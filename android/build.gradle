@@ -83,7 +83,11 @@ repositories {
 dependencies {
   //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-native:+"  // From node_modules
-  implementation "com.theoplayer.theoplayer-sdk-android:unified:${safeExtGet('THEOplayer_sdk', '+')}"
-  implementation "com.theoplayer.theoplayer-sdk-android:unified-ads:${safeExtGet('THEOplayer_sdk', '+')}"
-  implementation "com.theoplayer.theoplayer-sdk-android:unified-ads-ima:${safeExtGet('THEOplayer_sdk', '+')}"
+
+  // NOTE: a separate SDK is necessary for AndroidTV & fireTV
+  // See: https://github.com/THEOplayer/theoplayer-sdk-android
+  implementation "com.theoplayer.theoplayer-sdk-android:basic-minapi21:${safeExtGet('THEOplayer_sdk', '+')}"
+
+//  implementation "com.theoplayer.theoplayer-sdk-android:unified-ads:${safeExtGet('THEOplayer_sdk', '+')}"
+//  implementation "com.theoplayer.theoplayer-sdk-android:unified-ads-ima:${safeExtGet('THEOplayer_sdk', '+')}"
 }

@@ -6,6 +6,7 @@ import type { PlayerConfiguration } from 'react-native-theoplayer';
 const playerConfig: PlayerConfiguration = {
   license: undefined, // Get your THEOplayer license from https://portal.theoplayer.com/
   chromeless: true,
+  chromeless: false,
 };
 
 export default function App() {
