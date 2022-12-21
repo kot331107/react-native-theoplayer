@@ -1,13 +1,9 @@
 import React, { PureComponent } from 'react';
 import { PlayerConfiguration, THEOplayer, THEOplayerView } from 'react-native-theoplayer';
-import ALL_SOURCES from '../../res/sources.json';
 
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import styles from './VideoPlayer.style';
 import { VideoPlayerUI } from './VideoPlayerUI';
-import type { Source } from '../../utils/source/Source';
-
-const SOURCES = ALL_SOURCES.filter((source) => source.os.indexOf(Platform.OS) >= 0);
 
 export interface VideoPlayerProps {
   config?: PlayerConfiguration;
@@ -36,7 +32,7 @@ export class VideoPlayer extends PureComponent<VideoPlayerProps, VideoPlayerStat
       <View style={styles.container}>
         <THEOplayerView config={config} style={styles.fullScreen} onPlayerReady={this.onPlayerReady} />
 
-        {chromeless && player && <VideoPlayerUI sources={SOURCES as Source[]} player={player} />}
+        {chromeless && player && <VideoPlayerUI player={player} />}
       </View>
     );
   }
