@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `SourceDescription.poster` for Android & iOS.
+- Made the intervals for the forward and backward skip buttons on the iOS lockScreen configurable.
+
+## [7.3.0] - 24-06-03
+
 ### Changed
 
 - Disabled skip forward/backward remote control buttons by default for Live content on Android TV platforms.
