@@ -12,6 +12,7 @@ let SD_PROP_SOURCES: String = "sources"
 let SD_PROP_POSTER: String = "poster"
 let SD_PROP_TEXTTRACKS: String = "textTracks"
 let SD_PROP_METADATA: String = "metadata"
+let SD_PROP_METADATA_CACHINGTASK_ID: String = "cachingTaskId"
 let SD_PROP_METADATAKEYS: String = "metadataKeys"
 let SD_PROP_SRC: String = "src"
 let SD_PROP_TYPE: String = "type"
@@ -73,6 +74,19 @@ class THEOplayerRCTSourceDescriptionBuilder {
         guard let sourcesData = sourceData[SD_PROP_SOURCES] else {
             return (nil, nil)
         }
+        
+#if os(iOS)
+        if let metadataData = sourceData[SD_PROP_METADATA] as? [String:Any],
+           let cachingTaskId = metadataData[SD_PROP_METADATA_CACHINGTASK_ID] as? String {
+            // this is a MediaCache src, so fetch the original SourceDescription from the MediaCache
+            let cachingTaskWithId = THEOplayer.cache.tasks.first { cachingTask in
+                cachingTask.id == cachingTaskId
+            }
+            if let foundTask = cachingTaskWithId {
+                return (foundTask.source, nil)
+            }
+        }
+#endif
 
         var typedSources: [TypedSource] = []
         // case: array of source objects
@@ -156,9 +170,11 @@ class THEOplayerRCTSourceDescriptionBuilder {
         if let src = typedSourceData[SD_PROP_SRC] as? String {
             // extract the type
             let type = typedSourceData[SD_PROP_TYPE] as? String ?? THEOplayerRCTSourceDescriptionBuilder.extractMimeType(src)
+            let headers = typedSourceData[SD_PROP_HEADERS] as? [String:String]
             return TypedSource(src: src,
                                type: type,
-                               drm: contentProtection)
+                               drm: contentProtection,
+                               headers: headers)
         }
 
         // Check if we can extract a DAI source

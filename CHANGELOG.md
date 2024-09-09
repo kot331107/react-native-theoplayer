@@ -5,12 +5,98 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [7.9.0] - 24-09-06
+
+### Added
+
+- Added THEOlive source integration type to `SourceDescription`.
+- Added THEOads as `AdIntegrationKind`.
+- Added a `headers` property to `TypedSource`. The player will add the headers to the HTTP requests for the given resource.
+
+## [7.8.2] - 24-08-21
+
+### Changed
+
+- Modified the poster behavior on iOS and Android to remain visible until the first frame is displayed.
+
+## [7.8.1] - 24-08-14
+
+### Fixed
+
+- Fixed an issue on Android where the notification background would be displayed in low resolution on recent Android versions.
+
+### Added
+
+- Added support on iOS for 'album' and 'artist' in the nowPlayingInfo.
+
+## [7.8.0] - 24-08-09
+
+### Added
+
+- Added shouldResumeAfterInterruptions to the BackgroundAudioConfiguration which toggles playback resume after an interruption (e.g. phone call) on the lockscreen.
+- Added the option to set a nil source on the iOS Bridge, to 'unset' the previous source.
+- Added the fast-forward & rewind buttons for the Android notification when `mediaControl.mediaSessionEnabled` is set to `true`.
+- Added a `mediaControl.convertSkipToSeek` player config property to allow seeking with the `NEXT` and `PREVIOUS` media buttons. Its default value is `false`.
+
+### Fixed
+
+- Fixed an issue where the Lockscreen showed enabled controls when the player has no valid source.
+- Fixed an issue on Android where the notification would not disappear when setting an undefined source.
+
+### Changed
+
+- Replaced the `MediaBrowserService` with a regular `Service` to facilitate background playback on Android.
+
+## [7.7.1] - 24-07-29
+
+### Fixed
+
+- Fixed an issue on tvOS where native cache functionality was not excluded correctly resulting in build errors.
+
+## [7.7.0] - 24-07-25
+
+### Added
+
+- Added ActiveQualityChanged event support for iOS.
+
+### Fixed
+
+- Fixed an issue where on iOS a cached asset would not play when setting the tasks's source on the player.
+- Fixed an issue where on iOS the createTask method (CacheAPI) was not returning the created task.
+- Fixed an issue where on iOS the Ad and AdBreak protocols where extended in the underlying native SDK and required some modifications.
+- Fixed an issue where on Android the native module preparation would fail due to a change in the Android SDK 7.8.0 on eventDispatching.
+
+## [7.6.0] - 24-07-01
+
+### Added
+
+- Added `'root'` as an alternative id for the root div element in Web applications, supporting fullscreen presentation mode in Expo-based apps.
+- Added `renderingTarget` property to `THEOplayer` API for Android, enabling the option to choose between either rendering to a `SurfaceView` (default) or `TextureView`.
+
+### Changed
+
+- Lowered the required node version to v16+.
+
+## [7.5.1] - 24-06-20
+
+### Added
+
+- Added ad event support for custom SSAI integrations.
+
+## [7.5.0] - 24-06-18
+
+### Fixed
+
+- Fixed an issue where the Cast API wouldn't be initialized yet when in the `onPlayerReady` callback.
+- Added support for THEOplayer Android v7.6.0.
+
+## [7.4.0] - 24-06-11
 
 ### Added
 
 - Added support for `SourceDescription.poster` for Android & iOS.
 - Made the intervals for the forward and backward skip buttons on the iOS lockScreen configurable.
+- Added preferredPeakBitRate and preferredMaximumResolution to ABRConfiguration for iOS
 
 ## [7.3.0] - 24-06-03
 

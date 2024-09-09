@@ -1,5 +1,5 @@
 import { DefaultEventDispatcher } from './event/DefaultEventDispatcher';
-import type {
+import {
   ABRConfiguration,
   AdsAPI,
   CastAPI,
@@ -15,6 +15,7 @@ import type {
   PresentationModeChangeEvent,
   ProgressEvent,
   RateChangeEvent,
+  RenderingTarget,
   ResizeEvent,
   SourceDescription,
   TextTrack,
@@ -198,7 +199,7 @@ export class THEOplayerAdapter extends DefaultEventDispatcher<PlayerEventMap> im
   };
 
   get abr(): ABRConfiguration | undefined {
-    return Platform.OS === 'android' ? this._abrAdapter : undefined;
+    return this._abrAdapter;
   }
 
   get ads(): AdsAPI {
@@ -446,13 +447,24 @@ export class THEOplayerAdapter extends DefaultEventDispatcher<PlayerEventMap> im
     NativePlayerModule.setAspectRatio(this._view.nativeHandle, ratio);
   }
 
+  get renderingTarget(): RenderingTarget {
+    return this._state.renderingTarget;
+  }
+
+  set renderingTarget(target: RenderingTarget) {
+    if (Platform.OS === 'android') {
+      this._state.renderingTarget = target;
+      NativePlayerModule.setRenderingTarget(this._view.nativeHandle, target);
+    }
+  }
+
   get keepScreenOn(): boolean {
     return this._state.keepScreenOn;
   }
 
   set keepScreenOn(value: boolean) {
-    this._state.keepScreenOn = value;
     if (Platform.OS === 'android') {
+      this._state.keepScreenOn = value;
       NativePlayerModule.setKeepScreenOn(this._view.nativeHandle, value);
     }
   }
@@ -491,12 +503,12 @@ export class THEOplayerAdapter extends DefaultEventDispatcher<PlayerEventMap> im
    * @param version The native player version.
    * @param state An optional initial player state.
    */
-  initializeFromNativePlayer_(version: PlayerVersion, state: NativePlayerState | undefined) {
+  async initializeFromNativePlayer_(version: PlayerVersion, state: NativePlayerState | undefined) {
     this._playerVersion = version;
     if (state) {
       this._state.apply(state);
     }
-    this._castAdapter.init_();
+    await this._castAdapter.init_();
   }
 
   get width(): number | undefined {

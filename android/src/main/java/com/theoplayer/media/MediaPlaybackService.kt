@@ -6,16 +6,12 @@ import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.os.Binder
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
-import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.text.TextUtils
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.theoplayer.BuildConfig
 import com.theoplayer.ReactTHEOplayerContext
@@ -23,22 +19,20 @@ import com.theoplayer.android.api.player.Player
 import com.theoplayer.android.connector.mediasession.MediaSessionConnector
 import com.theoplayer.android.connector.mediasession.MediaSessionListener
 
-private const val BROWSABLE_ROOT = "/"
-private const val EMPTY_ROOT = "@empty@"
 private const val STOP_SERVICE_IF_APP_REMOVED = true
 
 private const val NOTIFICATION_ID = 1
 
 private const val TAG = "MediaPlaybackService"
 
-class MediaPlaybackService : MediaBrowserServiceCompat() {
+class MediaPlaybackService : Service() {
 
   private lateinit var notificationManager: NotificationManager
   private lateinit var notificationBuilder: MediaNotificationBuilder
 
   private var playerContext: ReactTHEOplayerContext? = null
 
-  private var enableMediaControls: Boolean = true
+  private var mediaSessionConfig: MediaSessionConfig = MediaSessionConfig()
 
   private val player: Player?
     get() = playerContext?.player
@@ -58,8 +52,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
       service.connectPlayerContext(playerContext)
     }
 
-    fun setEnablePlaybackControls(enable: Boolean) {
-      enableMediaControls = enable
+    fun setEnablePlaybackControls(newConfig: MediaSessionConfig) {
+      mediaSessionConfig = newConfig
       updateNotification()
     }
 
@@ -83,7 +77,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     initMediaSession()
 
     notificationManager = (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-    notificationBuilder = MediaNotificationBuilder(this, notificationManager, mediaSession)
+    notificationBuilder = MediaNotificationBuilder(this, notificationManager, mediaSessionConnector)
 
     // This ensures that the service starts and continues to run, even when all
     // UI MediaBrowser activities that are bound to it unbind.
@@ -175,9 +169,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
       // Set mediaSession active
       setActive(BuildConfig.EXTENSION_MEDIASESSION)
     }
-
-    // Set the MediaBrowserServiceCompat's media session.
-    sessionToken = mediaSession.sessionToken
   }
 
   private fun stopForegroundService() {
@@ -208,61 +199,24 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     mediaSessionConnector.removeListener(mediaSessionListener)
   }
 
-  override fun onGetRoot(
-    clientPackageName: String,
-    clientUid: Int,
-    rootHints: Bundle?
-  ): BrowserRoot {
-    // (Optional) Control the level of access for the specified package name.
-    // You'll need to write your own logic to do this.
-    return if (allowBrowsing(clientPackageName, clientUid)) {
-      // Returns a root ID that clients can use with onLoadChildren() to retrieve
-      // the content hierarchy.
-      BrowserRoot(BROWSABLE_ROOT, null)
-    } else {
-      // Clients can connect, but this BrowserRoot is an empty hierachy
-      // so onLoadChildren returns nothing. This disables the ability to browse for content.
-      BrowserRoot(EMPTY_ROOT, null)
-    }
-  }
-
-  @Suppress("UNUSED_PARAMETER")
-  private fun allowBrowsing(clientPackageName: String, clientUid: Int): Boolean {
-    // Only allow browsing from the same package
-    return TextUtils.equals(clientPackageName, packageName)
-  }
-
-  override fun onLoadChildren(
-    parentId: String,
-    result: Result<List<MediaBrowserCompat.MediaItem>>
-  ) {
-    if (parentId == EMPTY_ROOT) {
-      result.sendResult(null)
-      return
-    }
-    result.sendResult(emptyList())
-  }
-
   private fun updateNotification() {
-    player?.let {
-      if (it.isPaused) {
-        updateNotification(PlaybackStateCompat.STATE_PAUSED)
-      } else {
-        updateNotification(PlaybackStateCompat.STATE_PLAYING)
-      }
+    val player = player
+    when {
+      player?.source == null -> updateNotification(PlaybackStateCompat.STATE_STOPPED)
+      !player.isPaused -> updateNotification(PlaybackStateCompat.STATE_PLAYING)
+      else -> updateNotification(PlaybackStateCompat.STATE_PAUSED)
     }
   }
 
   private fun updateNotification(@PlaybackStateCompat.State playbackState: Int) {
-
     // When a service is playing, it should be running in the foreground.
     // This lets the system know that the service is performing a useful function and should
     // not be killed if the system is low on memory.
     when (playbackState) {
       PlaybackStateCompat.STATE_PAUSED -> {
         // Fetch large icon asynchronously
-        fetchImageFromUri(mediaSession.controller.metadata?.description?.iconUri) { largeIcon ->
-          notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build(playbackState, largeIcon, enableMediaControls))
+        fetchImageFromMetadata(player?.source) { largeIcon ->
+          notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build(playbackState, largeIcon, mediaSessionConfig.mediaSessionEnabled))
         }
       }
       PlaybackStateCompat.STATE_PLAYING -> {
@@ -274,7 +228,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         startForegroundWithPlaybackState(playbackState, loadPlaceHolderIcon(this))
 
         // Fetch the correct large icon asynchronously.
-        fetchImageFromUri(mediaSession.controller.metadata?.description?.iconUri) { largeIcon ->
+        fetchImageFromMetadata(player?.source) { largeIcon ->
           startForegroundWithPlaybackState(playbackState, largeIcon)
         }
       }
@@ -296,7 +250,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
       ServiceCompat.startForeground(
         this,
         NOTIFICATION_ID,
-        notificationBuilder.build(playbackState, largeIcon, enableMediaControls),
+        notificationBuilder.build(playbackState, largeIcon, mediaSessionConfig.mediaSessionEnabled),
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
           ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
         else 0

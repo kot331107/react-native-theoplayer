@@ -23,15 +23,18 @@ import com.facebook.imagepipeline.datasource.BaseBitmapDataSubscriber
 import com.facebook.imagepipeline.image.CloseableImage
 import com.facebook.imagepipeline.request.ImageRequest
 import com.theoplayer.R
+import com.theoplayer.android.api.source.SourceDescription
+import com.theoplayer.android.connector.mediasession.MediaSessionConnector
 
 private const val TAG = "MediaNotification"
 
 class MediaNotificationBuilder(
   private val context: Context,
   private val notificationManager: NotificationManager,
-  private val mediaSession: MediaSessionCompat
+  private val mediaSessionConnector: MediaSessionConnector
 ) {
-
+  private val mediaSession: MediaSessionCompat
+    get() = mediaSessionConnector.mediaSession
   private var channel: NotificationChannel? = null
   private var channelId: String? = null
 
@@ -64,6 +67,22 @@ class MediaNotificationBuilder(
     MediaButtonReceiver.buildMediaButtonPendingIntent(
       context,
       PlaybackStateCompat.ACTION_PLAY_PAUSE
+    )
+  )
+
+  private val forwardAction = NotificationCompat.Action(
+    R.drawable.ic_fast_forward, context.getString(R.string.fast_forward),
+    MediaButtonReceiver.buildMediaButtonPendingIntent(
+      context,
+      PlaybackStateCompat.ACTION_FAST_FORWARD
+    )
+  )
+
+  private val rewindAction = NotificationCompat.Action(
+    R.drawable.ic_rewind, context.getString(R.string.rewind),
+    MediaButtonReceiver.buildMediaButtonPendingIntent(
+      context,
+      PlaybackStateCompat.ACTION_REWIND
     )
   )
 
@@ -120,8 +139,16 @@ class MediaNotificationBuilder(
       // Add an app icon and set its accent color
       setSmallIcon(R.drawable.ic_notification_small)
 
-      // Set the large icon that is shown in the notification
-      setLargeIcon(largeIcon)
+      largeIcon?.let {
+        // Set the large icon that is shown in the notification
+        setLargeIcon(largeIcon)
+
+        // Also provide the mediaSession with our downloaded asset
+        mediaSessionConnector.getMediaSessionMetadataProvider().apply {
+          setArt(largeIcon)
+          invalidateMediaSessionMetadata()
+        }
+      }
 
       // Be careful when you set the background color. In an ordinary notification in
       // Android version 5.0 or later, the color is applied only to the background of the
@@ -130,13 +157,15 @@ class MediaNotificationBuilder(
       // on the eyes and avoid extremely bright or fluorescent colors.
       color = ContextCompat.getColor(context, R.color.app_primary_color)
 
-      // Add a play/pause button
+      // Add play/pause, rewind and fast-forward buttons.
       if (enableMediaControls) {
+        addAction(rewindAction)
         if (playbackState == PlaybackStateCompat.STATE_PAUSED) {
           addAction(playAction)
         } else if (playbackState == PlaybackStateCompat.STATE_PLAYING) {
           addAction(pauseAction)
         }
+        addAction(forwardAction)
       } else {
         // Add empty placeholder action as clearActions() does not work.
         addAction(0, null, null)
@@ -150,7 +179,13 @@ class MediaNotificationBuilder(
       style.setMediaSession(mediaSession.sessionToken)
 
       // Add up to 3 actions to be shown in the notification's standard-sized contentView.
-      style.setShowActionsInCompactView(0)
+      if (enableMediaControls) {
+        // The Rewind, Play/Pause and FastForward actions.
+        style.setShowActionsInCompactView(0, 1, 2)
+      } else {
+        // The placeholder action, which was added above.
+        style.setShowActionsInCompactView(0)
+      }
 
       if (enableCancelButton) {
         // In Android 5.0 (API level 21) and later you can swipe away a notification to
@@ -169,16 +204,13 @@ class MediaNotificationBuilder(
   }
 }
 
-fun fetchImageFromUri(uri: Uri?, block: (Bitmap?) -> Unit) {
-  if (uri == null) {
+fun fetchImageFromMetadata(source: SourceDescription?, block: (Bitmap?) -> Unit) {
+  val img = source?.poster ?: source?.metadata?.get("displayIconUri")
+  if (img == null) {
     block(null)
     return
   }
-
-  val imageRequest = ImageRequest.fromUri(uri)
-  val imagePipeline = Fresco.getImagePipeline()
-
-  imagePipeline.fetchDecodedImage(imageRequest, null).also {
+  Fresco.getImagePipeline().fetchDecodedImage(ImageRequest.fromUri(Uri.parse(img)), null).also {
     it.subscribe(
       object : BaseBitmapDataSubscriber() {
         override fun onNewResultImpl(bitmap: Bitmap?) {
@@ -187,7 +219,7 @@ fun fetchImageFromUri(uri: Uri?, block: (Bitmap?) -> Unit) {
 
         override fun onFailureImpl(dataSource: DataSource<CloseableReference<CloseableImage>>) {
           if (dataSource.failureCause != null) {
-            Log.w(TAG, "Failed to get image $uri")
+            Log.w(TAG, "Failed to get image $img")
           }
           block(null)
         }
@@ -200,7 +232,7 @@ fun fetchImageFromUri(uri: Uri?, block: (Bitmap?) -> Unit) {
 fun loadPlaceHolderIcon(context: Context, res: Int = R.drawable.ic_notification_large): Bitmap? {
   return try {
     BitmapFactory.decodeResource(context.resources, res)
-  } catch(e: Exception) {
+  } catch (e: Exception) {
     // Make sure we never crash on trying to decode a possibly overridden icon resource.
     Log.w(TAG, "Failed to decode placeHolderIcon: ${e.message}")
     null
